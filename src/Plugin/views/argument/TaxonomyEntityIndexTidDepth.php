@@ -54,17 +54,17 @@ class TaxonomyEntityIndexTidDepth extends IndexTidDepth {
     $last = "tn";
 
     if ($this->options['depth'] > 0) {
-      $subquery->leftJoin('taxonomy_term_hierarchy', 'th', "th.tid = tn.tid");
+      $subquery->leftJoin('taxonomy_term__parent', 'th', "th.entity_id = tn.tid");
       $last = "th";
       foreach (range(1, abs($this->options['depth'])) as $count) {
-        $subquery->leftJoin('taxonomy_term_hierarchy', "th$count", "$last.parent = th$count.tid");
-        $where->condition("th$count.tid", $tids, $operator);
+        $subquery->leftJoin('taxonomy_term__parent', "th$count", "$last.parent_target_id = th$count.entity_id");
+        $where->condition("th$count.entity_id", $tids, $operator);
         $last = "th$count";
       }
     }
     elseif ($this->options['depth'] < 0) {
       foreach (range(1, abs($this->options['depth'])) as $count) {
-        $subquery->leftJoin('taxonomy_term_hierarchy', "th$count", "$last.tid = th$count.parent");
+        $subquery->leftJoin('taxonomy_term__parent', "th$count", "$last.entity_id = th$count.parent_target_id");
         $where->condition("th$count.tid", $tids, $operator);
         $last = "th$count";
       }

@@ -66,9 +66,9 @@ function taxonomy_entity_index_views_data_alter(&$data) {
     'field' => 'tid',
   );
 
-  $data['taxonomy_term_hierarchy']['table']['join']['taxonomy_entity_index'] = array(
-    // links directly to taxonomy_term_hierarchy via tid
+  $data['taxonomy_term__parent']['table']['join']['taxonomy_entity_index'] = array(
+    // links directly to taxonomy_term__parent via tid
     'left_field' => 'tid',
-    'field' => 'tid',
+    'field' => 'entity_id',
   );
 }
