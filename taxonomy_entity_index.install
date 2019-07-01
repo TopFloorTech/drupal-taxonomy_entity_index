@@ -1,72 +1,83 @@
 <?php
 
 /**
+ * @file
+ * Install file for taxonomy_entity_index.
+ */
+
+/**
  * Implements hook_schema().
  */
 function taxonomy_entity_index_schema() {
-  $schema['taxonomy_entity_index'] = array(
+  $schema['taxonomy_entity_index'] = [
     'description' => 'Maintains denormalized information about entity/term relationships.',
-    'fields' => array(
-      'entity_type' => array(
+    'fields' => [
+      'entity_type' => [
         'description' => 'The entity type this term is attached to.',
         'type' => 'varchar',
         'length' => 32,
         'not null' => TRUE,
-      ),
-      'bundle' => array(
+      ],
+      'bundle' => [
         'description' => 'The entity bundle this term is attached to.',
         'type' => 'varchar',
         'length' => 128,
         'not null' => TRUE,
         'default' => '',
-      ),
-      'entity_id' => array(
+      ],
+      'entity_id' => [
         'description' => 'The entity ID this term is attached to.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-      ),
-      'revision_id' => array(
+      ],
+      'revision_id' => [
         'description' => 'The entity revision ID this term is attached to.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0,
-      ),
-      'field_name' => array(
+      ],
+      'field_name' => [
         'description' => 'The field name the term is attached to.',
         'type' => 'varchar',
         'length' => 32,
         'not null' => TRUE,
         'default' => '',
-      ),
-      'delta' => array(
+      ],
+      'delta' => [
         'description' => 'The delta order of the term in the field.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0,
-      ),
-      'tid' => array(
+      ],
+      'tid' => [
         'description' => 'The term ID.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0,
-      ),
-    ),
-    'primary key' => array('entity_type', 'entity_id', 'revision_id', 'field_name', 'delta'),
-    'indexes' => array(
-      'field_instance' => array('field_name', 'entity_type', 'bundle'),
-      'tid' => array('tid'),
-    ),
-    'foreign keys' => array(
-      'term' => array(
+      ],
+    ],
+    'primary key' => [
+      'entity_type',
+      'entity_id',
+      'revision_id',
+      'field_name',
+      'delta',
+    ],
+    'indexes' => [
+      'field_instance' => ['field_name', 'entity_type', 'bundle'],
+      'tid' => ['tid'],
+    ],
+    'foreign keys' => [
+      'term' => [
         'table' => 'taxonomy_term_data',
-        'columns' => array('tid' => 'tid'),
-      ),
-    ),
-  );
+        'columns' => ['tid' => 'tid'],
+      ],
+    ],
+  ];
 
   return $schema;
 }
