@@ -1,11 +1,12 @@
 <?php
+
 namespace Drupal\taxonomy_entity_index\Plugin\views\field;
+
 use Drupal\Component\Utility\Html;
 use Drupal\taxonomy\Plugin\views\field\TaxonomyIndexTid;
 use Drupal\taxonomy\VocabularyStorageInterface;
 use Drupal\views\Plugin\views\display\DisplayPluginBase;
 use Drupal\views\ViewExecutable;
-use Drupal\views\Views;
 
 /**
  * Field handler to display all taxonomy terms of an entity.
@@ -15,20 +16,25 @@ use Drupal\views\Views;
  * @ViewsField("taxonomy_entity_index_tid")
  */
 class TaxonomyEntityIndexTid extends TaxonomyIndexTid {
+
   /**
    * Stores the base table information.
+   *
+   * @var array
    */
-  var $base_table_info = NULL;
+  private $baseTableInfo = [];
 
   /**
    * Stores the entity info of the base table.
+   *
+   * @var array
    */
-  var $entity_info = NULL;
+  private $entityInfo = [];
 
   /**
    * The vocabulary storage.
    *
-   * @var \Drupal\taxonomy\VocabularyStorageInterface.
+   * @var \Drupal\taxonomy\VocabularyStorageInterface
    */
   protected $vocabularyStorage;
 
@@ -40,20 +46,26 @@ class TaxonomyEntityIndexTid extends TaxonomyIndexTid {
     $this->vocabularyStorage = $vocabulary_storage;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function init(ViewExecutable $view, DisplayPluginBase $display, array &$options = NULL) {
     parent::init($view, $display, $options);
 
     // Reset the variables which are set by the parent class.
     unset($this->additional_fields['nid']);
 
-    $this->base_table_info = \Drupal::service('views.views_data')->get($this->table);
-    $this->entity_info = \Drupal::entityTypeManager()->getDefinition($this->base_table_info['table']['entity type']);
-    $this->additional_fields['entity_id'] = array('table' => $this->entity_info->getBaseTable(), 'field' => $this->entity_info->getKey('id'));
+    $this->baseTableInfo = \Drupal::service('views.views_data')->get($this->table);
+    $this->entityInfo = \Drupal::entityTypeManager()->getDefinition($this->baseTableInfo['table']['entity type']);
+    $this->additional_fields['entity_id'] = ['table' => $this->entityInfo->getBaseTable(), 'field' => $this->entityInfo->getKey('id')];
   }
 
-  public function pre_render(&$values) {
+  /**
+   * {@inheritdoc}
+   */
+  public function preRender(&$values) {
     $this->field_alias = $this->aliases['entity_id'];
-    $entity_ids = array();
+    $entity_ids = [];
     foreach ($values as $result) {
       if (!empty($result->{$this->field_alias})) {
         $entity_ids[] = $result->{$this->field_alias};
@@ -73,7 +85,7 @@ class TaxonomyEntityIndexTid extends TaxonomyIndexTid {
       $query->orderby('td.weight');
       $query->orderby('td.name');
       $query->condition('tei.entity_id', $entity_ids);
-      $query->condition('tei.entity_type', $this->base_table_info['table']['entity type']);
+      $query->condition('tei.entity_type', $this->baseTableInfo['table']['entity type']);
       $query->addTag('term_access');
       $vocabs = array_filter($this->options['vids']);
       if (!empty($this->options['limit']) && !empty($vocabs)) {
@@ -94,4 +106,5 @@ class TaxonomyEntityIndexTid extends TaxonomyIndexTid {
       }
     }
   }
+
 }

@@ -1,9 +1,18 @@
 <?php
 
 /**
+ * @file
+ * Module file for taxonomy_entity_index.
+ */
+
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\field\Entity\FieldConfig;
+use Drupal\taxonomy\TermInterface;
+
+/**
  * Implements hook_field_config_delete().
  */
-function taxonomy_entity_index_field_config_delete(Drupal\field\Entity\FieldConfig $instance) {
+function taxonomy_entity_index_field_config_delete(FieldConfig $instance) {
   db_delete('taxonomy_entity_index')
     ->condition('field_name', $instance->id())
     ->condition('entity_type', $instance->getEntityTypeId())
@@ -14,7 +23,7 @@ function taxonomy_entity_index_field_config_delete(Drupal\field\Entity\FieldConf
 /**
  * Implements hook_entity_delete().
  */
-function taxonomy_entity_index_entity_delete(Drupal\Core\Entity\EntityInterface $entity) {
+function taxonomy_entity_index_entity_delete(EntityInterface $entity) {
   db_delete('taxonomy_entity_index')
     ->condition('entity_type', $entity->getEntityTypeId())
     ->condition('entity_id', $entity->id())
@@ -24,7 +33,7 @@ function taxonomy_entity_index_entity_delete(Drupal\Core\Entity\EntityInterface 
 /**
  * Implements hook_ENTITY_TYPE_delete().
  */
-function taxonomy_entity_index_taxonomy_term_delete(\Drupal\taxonomy\TermInterface $term) {
+function taxonomy_entity_index_taxonomy_term_delete(TermInterface $term) {
   db_delete('taxonomy_entity_index')
     ->condition('tid', $term->id())
     ->execute();
@@ -33,7 +42,7 @@ function taxonomy_entity_index_taxonomy_term_delete(\Drupal\taxonomy\TermInterfa
 /**
  * Implements hook_entity_revision_delete().
  */
-function taxonomy_entity_index_entity_revision_delete(Drupal\Core\Entity\EntityInterface $entity) {
+function taxonomy_entity_index_entity_revision_delete(EntityInterface $entity) {
   db_delete('taxonomy_entity_index')
     ->condition('entity_type', $entity->getEntityTypeId())
     ->condition('entity_id', $entity->id())
@@ -44,14 +53,14 @@ function taxonomy_entity_index_entity_revision_delete(Drupal\Core\Entity\EntityI
 /**
  * Implements hook_entity_insert().
  */
-function taxonomy_entity_index_entity_insert(Drupal\Core\Entity\EntityInterface $entity) {
+function taxonomy_entity_index_entity_insert(EntityInterface $entity) {
   taxonomy_entity_index_entity_update($entity);
 }
 
 /**
  * Implements hook_entity_update().
  */
-function taxonomy_entity_index_entity_update(Drupal\Core\Entity\EntityInterface $entity) {
+function taxonomy_entity_index_entity_update(EntityInterface $entity) {
   $entity_type_id = $entity->getEntityTypeId();
   $entity_types_to_index = \Drupal::config('taxonomy_entity_index.settings')
     ->get('types');
@@ -86,25 +95,33 @@ function taxonomy_entity_index_entity_update(Drupal\Core\Entity\EntityInterface 
   }
   $term_ref_field_names = $term_ref_field_names[$bundle];
 
-  $terms = array();
+  $terms = [];
   foreach ($term_ref_field_names as $field_name) {
     if ($items = $entity->get($field_name)->getValue()) {
       foreach ($items as $delta => $item) {
-        $terms[] = array(
+        $terms[] = [
           'tid' => $item['target_id'],
           'field_name' => $field_name,
           'delta' => $delta,
-        );
+        ];
       }
     }
   }
 
   if (!empty($terms)) {
     $query = db_insert('taxonomy_entity_index');
-    $query->fields(array('entity_type', 'bundle', 'entity_id', 'revision_id', 'field_name', 'delta', 'tid'));
+    $query->fields([
+      'entity_type',
+      'bundle',
+      'entity_id',
+      'revision_id',
+      'field_name',
+      'delta',
+      'tid',
+    ]);
 
     foreach ($terms as $term) {
-      $query->values(array(
+      $query->values([
         'entity_type' => $entity_type_id,
         'bundle' => $bundle,
         'entity_id' => $entity_id,
@@ -112,7 +129,7 @@ function taxonomy_entity_index_entity_update(Drupal\Core\Entity\EntityInterface 
         'field_name' => $term['field_name'],
         'delta' => $term['delta'],
         'tid' => $term['tid'],
-      ));
+      ]);
     }
 
     $query->execute();
@@ -123,7 +140,7 @@ function taxonomy_entity_index_entity_update(Drupal\Core\Entity\EntityInterface 
  * Return all the taxonomy entity reference field names for a given entity type.
  */
 function taxonomy_entity_index_get_taxonomy_field_names($entity_type_id) {
-  $cache_id = 'entity-taxonomy-fields' . '_' . $entity_type_id;
+  $cache_id = 'entity-taxonomy-fields_' . $entity_type_id;
   $entity_ref_fields = &drupal_static($cache_id);
 
   if (!isset($entity_ref_fields)) {
@@ -131,7 +148,7 @@ function taxonomy_entity_index_get_taxonomy_field_names($entity_type_id) {
       $entity_ref_fields = $cache->data;
     }
     else {
-      $entity_ref_fields = array();
+      $entity_ref_fields = [];
       $entity_field_manager = \Drupal::entityManager();
       $fieldmap = $entity_field_manager->getFieldMapByFieldType('entity_reference');
 
@@ -165,10 +182,11 @@ function taxonomy_entity_index_get_taxonomy_field_names($entity_type_id) {
  * Batch callback; re-index all the terms for a given entity type.
  */
 function taxonomy_entity_index_reindex_entity_type($entity_type_id, &$context) {
+
   $entity_type_manger = \Drupal::entityTypeManager();
 
   if (empty($context['sandbox'])) {
-    $context['sandbox'] = array();
+    $context['sandbox'] = [];
     $context['sandbox']['progress'] = 0;
     $context['sandbox']['current_id'] = 0;
     $context['sandbox']['bundles'] = array_keys(taxonomy_entity_index_get_taxonomy_field_names($entity_type_id));
@@ -183,10 +201,16 @@ function taxonomy_entity_index_reindex_entity_type($entity_type_id, &$context) {
     if (!empty($context['sandbox']['bundles'])) {
       $query = \Drupal::entityQuery($entity_type_id);
       if ($entity_type_id !== 'user') {
-        $query->condition('type', $context['sandbox']['bundles'], 'IN');
+        if ($entity_type_id === 'media') {
+          $query->condition('bundle', $context['sandbox']['bundles'], 'IN');
+        }
+        else {
+          $query->condition('type', $context['sandbox']['bundles'], 'IN');
+        }
       }
       $query->condition($context['sandbox']['entity_key_id'], 0, '>');
       $query->count();
+
       $context['sandbox']['max'] = (int) $query->execute();
     }
     if (empty($context['sandbox']['max'])) {
@@ -199,7 +223,12 @@ function taxonomy_entity_index_reindex_entity_type($entity_type_id, &$context) {
   $limit = 25;
   $query = \Drupal::entityQuery($entity_type_id);
   if ($entity_type_id != 'user') {
-    $query->condition('type', $context['sandbox']['bundles'], 'IN');
+    if ($entity_type_id === 'media') {
+      $query->condition('bundle', $context['sandbox']['bundles'], 'IN');
+    }
+    else {
+      $query->condition('type', $context['sandbox']['bundles'], 'IN');
+    }
   }
   $query->condition($entity_id_key, $context['sandbox']['current_id'], '>');
   $query->sort($entity_id_key, 'ASC');
@@ -210,7 +239,7 @@ function taxonomy_entity_index_reindex_entity_type($entity_type_id, &$context) {
   foreach ($entities as $id => $entity) {
     taxonomy_entity_index_entity_update($entity);
     $context['sandbox']['current_id'] = $id;
-    $context['message'] = t('Updating taxonomy entity index data for @type @id.', array('@type' => $entity_type_id, '@id' => $id));
+    $context['message'] = t('Updating taxonomy entity index data for @type @id.', ['@type' => $entity_type_id, '@id' => $id]);
   }
 
   // In case any of the entities fail to load, increase the progress by the
@@ -234,7 +263,6 @@ function taxonomy_entity_index_reindex_finished($success, $results, $operations)
   }
   else {
     // An error occurred.
-    $error_operation = reset($operations);
     drupal_set_message(t('An error occurred while processing the operation.'));
   }
 }
@@ -246,6 +274,7 @@ function taxonomy_entity_index_reindex_finished($success, $results, $operations)
  * has already a views integration.
  *
  * @return \Drupal\Core\Entity\EntityTypeInterface[]
+ *   An array of entity types.
  */
 function taxonomy_entity_index_entity_views_integrable() {
   $entity_types = \Drupal::entityTypeManager()->getDefinitions();
@@ -257,5 +286,5 @@ function taxonomy_entity_index_entity_views_integrable() {
   }
 
   return $entity_types;
-}
 
+}

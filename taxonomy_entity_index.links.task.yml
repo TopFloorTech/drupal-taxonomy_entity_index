@@ -7,4 +7,3 @@ taxonomy_entity_index.admin_reindex:
   title: 'Reindex'
   route_name: taxonomy_entity_index.admin_reindex
   base_route: taxonomy_entity_index.admin
-
